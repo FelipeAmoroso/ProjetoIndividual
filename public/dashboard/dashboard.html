@@ -1,21 +1,21 @@
 <!DOCTYPE html>
 <html lang="pt-br">
-
+ 
 <head>
   <meta charset="UTF-8">
   <title>Top Spin Hub | Dashboard</title>
-
+ 
   <link rel="stylesheet" href="../css/estilo.css">
   <link rel="stylesheet" href="../css/dashboards.css">
-
+ 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-
+ 
 <body>
-
+ 
   <div class="header">
     <div class="container">
-
+ 
       <div class="boxes">
         <div class="box">
           <a href="../index.html">
@@ -23,120 +23,197 @@
           </a>
         </div>
       </div>
-
+ 
       <div class="container_bt">
         <ul class="navbar">
           <li><a href="../index.html">Inicio</a></li>
           <li><a href="../quiz.html">Quiz</a></li>
           <li>|</li>
           <li class="agora"><a href="#">Dashboard</a></li>
+          <li><a href="../login.html" onclick="limparSessao()">Sair</a></li>
         </ul>
       </div>
-
+ 
     </div>
   </div>
-
-  
+ 
+ 
   <div class="dashboard">
-
-    <h2>Olá, <span id="b_usuario"></span> </h2>
-
-
+ 
+    <h2>Olá, <span id="b_usuario"></span></h2>
+ 
     <div class="indicadores">
-
       <div class="card">
         <h4>Acertos</h4>
         <p id="acertos">0</p>
       </div>
-
       <div class="card">
         <h4>Erros</h4>
         <p id="erros">0</p>
       </div>
-
       <div class="card">
         <h4>% Acerto</h4>
         <p id="porcentagem">0%</p>
       </div>
-
     </div>
-
-  
+ 
     <div class="extras">
       <p id="nivel"></p>
       <p id="mensagem"></p>
     </div>
-
+ 
     <div class="grafico">
       <canvas id="graficoQuiz" width="350" height="350"></canvas>
     </div>
-
+ 
   </div>
-
+ 
 </body>
-
+ 
 </html>
-
+ 
 <script>
-
-  document.getElementById("b_usuario").innerHTML =
-    sessionStorage.NOME_USUARIO || "Usuário";
-
-  window.onload = carregarDashboard();
-
-  function carregarDashboard() {
-
-fetch(`/resultados/listar/${sessionStorage.ID_USUARIO}`)
-  .then(res => res.json())
-  .then(dados => {
-
-    if (dados.length == 0) return;
-
-    // pega o ÚLTIMO resultado
+  document.getElementById("b_usuario").innerHTML = sessionStorage.NOME_USUARIO || "Usuário";
+ 
+  let proximaAtualizacao;
+ 
+  window.onload = obterDadosGrafico();
+ 
+  // 1. obterDadosGrafico → busca os dados no banco e chama plotarGrafico
+  function obterDadosGrafico() {
+ 
+    if (proximaAtualizacao != undefined) {
+      clearTimeout(proximaAtualizacao);
+    }
+ 
+    fetch(`/resultados/listar/${sessionStorage.ID_USUARIO}`, { cache: 'no-store' })
+      .then(function (response) {
+        if (response.ok) {
+          response.json().then(function (dados) {
+            console.log(`Dados recebidos: ${JSON.stringify(dados)}`);
+ 
+            if (dados.length == 0) return;
+ 
+            plotarGrafico(dados);
+          });
+        } else {
+          console.error('Nenhum dado encontrado ou erro na API');
+        }
+      })
+      .catch(function (error) {
+        console.error(`Erro na obtenção dos dados p/ gráfico: ${error.message}`);
+      });
+  }
+ 
+  // 2. plotarGrafico → monta os cards de indicadores e o gráfico doughnut
+  function plotarGrafico(dados) {
+ 
+    console.log('Iniciando plotagem do gráfico...');
+ 
     var ultimo = dados[dados.length - 1];
-
+ 
     var acertos = Number(ultimo.acertos);
     var erros = Number(ultimo.erros);
-
     var total = acertos + erros;
     var porcentagem = total > 0 ? ((acertos / total) * 100).toFixed(1) : 0;
-
+ 
+    
     document.getElementById("acertos").innerHTML = acertos;
     document.getElementById("erros").innerHTML = erros;
     document.getElementById("porcentagem").innerHTML = porcentagem + "%";
-
-    // nível
+ 
+    
     var nivel = "";
-    if (porcentagem >= 80) nivel = " Nível: Avançado";
-    else if (porcentagem >= 50) nivel = " Nível: Intermediário";
-    else nivel = " Nível: Iniciante";
-
+    if (porcentagem >= 80) nivel = "Nível: Avançado";
+    else if (porcentagem >= 50) nivel = "Nível: Intermediário";
+    else nivel = "Nível: Iniciante";
     document.getElementById("nivel").innerHTML = nivel;
-
-    // mensagem
+ 
+    
     var msg = "";
     if (porcentagem >= 80) msg = "Mandou muito bem!";
     else if (porcentagem >= 50) msg = "Bom desempenho!";
     else msg = "Vale revisar o conteúdo!";
-
     document.getElementById("mensagem").innerHTML = msg;
-
-    // gráfico
-    new Chart(document.getElementById('graficoQuiz'), {
+ 
+    
+    var dadosGrafico = {
+      labels: ['Acertos', 'Erros'],
+      datasets: [{
+        data: [acertos, erros],
+        backgroundColor: ['#0a1f44', '#e3b062']
+      }]
+    };
+ 
+    console.log('O gráfico será plotado com os respectivos valores:');
+    console.log(dadosGrafico.datasets);
+ 
+    
+    var myChart = new Chart(document.getElementById('graficoQuiz'), {
       type: 'doughnut',
-      data: {
-        labels: ['Acertos', 'Erros'],
-        datasets: [{
-          data: [acertos, erros],
-          backgroundColor: ['#0a1f44', '#e3b062']
-        }]
-      },
+      data: dadosGrafico,
       options: {
         responsive: false
       }
     });
+ 
+    
+    setTimeout(() => atualizarGrafico(dadosGrafico, myChart), 2000);
+  }
+ 
+  // 3. atualizarGrafico → busca o resultado mais recente e atualiza o gráfico
+  function atualizarGrafico(dadosGrafico, myChart) {
+ 
+    fetch(`/resultados/ultimo/${sessionStorage.ID_USUARIO}`, { cache: 'no-store' })
+      .then(function (response) {
+        if (response.ok) {
+          response.json().then(function (novoRegistro) {
+ 
+            console.log(`Dados recebidos: ${JSON.stringify(novoRegistro)}`);
+ 
+            var acertos = Number(novoRegistro[0].acertos);
+            var erros = Number(novoRegistro[0].erros);
+            var total = acertos + erros;
+            var porcentagem = total > 0 ? ((acertos / total) * 100).toFixed(1) : 0;
+ 
+           
+            if (
+              dadosGrafico.datasets[0].data[0] == acertos &&
+              dadosGrafico.datasets[0].data[1] == erros
+            ) {
+              console.log('Como não há dados novos para captura, o gráfico não atualizará.');
+            } else {
+              document.getElementById("acertos").innerHTML = acertos;
+              document.getElementById("erros").innerHTML = erros;
+              document.getElementById("porcentagem").innerHTML = porcentagem + "%";
+ 
+              var nivel = "";
+              if (porcentagem >= 80) nivel = "Nível: Avançado";
+              else if (porcentagem >= 50) nivel = "Nível: Intermediário";
+              else nivel = "Nível: Iniciante";
+              document.getElementById("nivel").innerHTML = nivel;
+ 
+              var msg = "";
+              if (porcentagem >= 80) msg = "Mandou muito bem!";
+              else if (porcentagem >= 50) msg = "Bom desempenho!";
+              else msg = "Vale revisar o conteúdo!";
+              document.getElementById("mensagem").innerHTML = msg;
+ 
+              dadosGrafico.datasets[0].data[0] = acertos;
+              dadosGrafico.datasets[0].data[1] = erros;
+ 
+              myChart.update();
+            }
 
-  });
-}
-
+            proximaAtualizacao = setTimeout(() => atualizarGrafico(dadosGrafico, myChart), 2000);
+          });
+        } else {
+          console.error('Nenhum dado encontrado ou erro na API');
+          proximaAtualizacao = setTimeout(() => atualizarGrafico(dadosGrafico, myChart), 2000);
+        }
+      })
+      .catch(function (error) {
+        console.error(`Erro na obtenção dos dados p/ gráfico: ${error.message}`);
+      });
+  }
 </script>
