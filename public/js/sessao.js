@@ -17,6 +17,24 @@ function limparSessao() {
     window.location = "../login.html";
 }
 
+function protegerPagina() {
+    if (!sessionStorage.ID_USUARIO) {
+        window.location.href = "login.html";
+    }
+}
+
+function atualizarMenu() {
+    var logado = !!sessionStorage.ID_USUARIO;
+
+    document.querySelectorAll("a[href*='login.html'], a[href*='cadastro.html']").forEach(function(link) {
+        var li = link.closest("li");
+        if (li) li.style.display = logado ? "none" : "";
+    });
+
+    var liSair = document.getElementById("li-sair");
+    if (liSair) liSair.style.display = logado ? "" : "none";
+}
+
 // carregamento (loading)
 function aguardar() {
     var divAguardar = document.getElementById("div_aguardar");
@@ -34,3 +52,4 @@ function finalizarAguardar(texto) {
     }
 }
 
+document.addEventListener("DOMContentLoaded", atualizarMenu);
