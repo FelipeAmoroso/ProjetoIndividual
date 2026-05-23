@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="./css/estilo.css">
 </head>
 
-<body onload="onloadEsconder()">
+<body onload="onloadEsconder(); protegerPagina();">
 
     <div class="header">
 
@@ -39,7 +39,7 @@
                     </li>
 
                     <li>
-                        <a href="index.html">História</a>
+                        <a href="index.html#historia">História</a>
                     </li>
 
                     <li>
@@ -58,6 +58,10 @@
 
                     <li>
                         <a href="cadastro.html">Cadastro</a>
+                    </li>
+
+                    <li id="li-sair" style="display:none;">
+                        <a href="login.html" onclick="limparSessao()">Sair</a>
                     </li>
 
                 </ul>
