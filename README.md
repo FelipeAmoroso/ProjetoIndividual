@@ -45,13 +45,13 @@ Além disso, a plataforma registra os resultados obtidos pelos usuários e apres
 ### 1. Clone o repositório
 
 ```bash
-git clone https://github.com/SEU-USUARIO/SEU-REPOSITORIO.git
+git clone https://github.com/FelipeAmoroso/ProjetoIndividual_TopSpinHub.git
 ```
 
 ### 2. Acesse a pasta do projeto
 
 ```bash
-cd SEU-REPOSITORIO
+cd ProjetoIndividual_TopSpinHub
 ```
 
 ### 3. Instale as dependências
